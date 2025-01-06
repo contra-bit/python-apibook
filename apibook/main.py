@@ -39,14 +39,19 @@ def path_to_module(root: str, file: str) -> str:
     components = path.replace("/./", "/").split("/")
     return ".".join(components)
 
-
 def fixup_reexports(root_module: str, docs: dict[str, Module]):
     """Inlines items that are reexported from other modules via '__all__'
     lists."""
     for mod, content in docs.items():
         logger.info("Fixing up reexports for '%s'", mod)
         for alias in content.all_exports:
-            module, item = content.resolve_import(alias)
+            result = content.resolve_import(alias)
+
+            if result is None:
+                logger.warning(f"Could not resolve import {alias} because result is None")
+                continue
+
+            module, item = result
 
             if module == mod:
                 continue  # Don't reexport from the same module
@@ -64,6 +69,10 @@ def fixup_reexports(root_module: str, docs: dict[str, Module]):
                     found_item = source_doc.resolve_export(item)
                     logger.debug(f"For {mod}.{item} found {found_item}")
 
+                    if found_item is None:
+                        logger.warning(f"Could not find {mod}.{item}")
+                        continue
+
                     match found_item:
                         case Class(_, _, _, _):
                             content.classes.append(found_item)
@@ -80,14 +89,11 @@ def fixup_reexports(root_module: str, docs: dict[str, Module]):
                         case Variable(_):
                             content.variables.append(item)
                             break
-                        case None:
-                            print(f"Could not find {mod}.{item}")
-
-            else:
-                known_modules = "\t" + "\n\t".join(f'"{k}"' for k in docs.keys())
-                raise ValueError(
-                    f"Could not find module {module} or {module}.__init__ - known modules:\n{known_modules}"
-                )
+                else:
+                    known_modules = "\t" + "\n\t".join(f'"{k}"' for k in docs.keys())
+                    raise ValueError(
+                        f"Could not find module {module} or {module}.__init__ - known modules:\n{known_modules}"
+                    )
 
 
 def run(root_dir: str, output_dir: str, summary_output_template: str | None):

@@ -32,11 +32,25 @@ class AstVisitor(ast.NodeVisitor):
 
     def visit_Assign(self, node):
         # we look for __all__ = [...] assignments to determine what is exported
-        if len(node.targets) == 1 and node.targets[0].id == "__all__":
-            self._all_exports = [n.s for n in node.value.elts]
-
+        if len(node.targets) == 1:
+            if isinstance(node.targets[0], ast.Name) and node.targets[0].id == "__all__":
+                if isinstance(node.value, ast.List):
+                    self._all_exports = [n.s for n in node.value.elts]
+                elif isinstance(node.value, ast.Tuple):
+                    self._all_exports = [n.s for n in node.value.elts]
+                else:
+                    # Handle other types of assignments to __all__
+                    # For example, you could raise an error or ignore the assignment
+                    pass
+            elif isinstance(node.targets[0], ast.Attribute) and node.targets[0].attr == "__all__":
+                # Handle assignments to __all__ on an object
+                # For example, you could raise an error or ignore the assignment
+                pass
+            else:
+                self._variables.append(Variable(ast.unparse(node.targets[0]), ast.unparse(node.value)))
         else:
             self._variables.append(Variable(ast.unparse(node.targets[0]), ast.unparse(node.value)))
+    
 
     def visit_AnnAssign(self, node):
         visitor = TypeAliasVisitor()

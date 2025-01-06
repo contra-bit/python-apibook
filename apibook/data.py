@@ -302,7 +302,19 @@ class Module:
                     if item == name:
                         return self.name, name
 
-        logger.warning(f"Could not resolve import {item} from {self}")
+                case ClassField(name):
+                    if item == name:
+                        return self.name, name
+
+                case Function(name):
+                     if item == name:
+                         return self.name, name
+
+                case Attribute(module, name):
+                    if item == name:
+                        return module, name
+
+        logger.warning(f"Could not resolve import {item} from {self.name}")
         return None
 
     @property
@@ -380,3 +392,16 @@ class ClassField:
 class Variable:
     name: str
     value: str
+
+@dataclass
+class Function:
+    name: str
+    return_type: str | None
+    args: list[str] | None
+
+
+@dataclass
+class Attribute:
+    module: str
+    name: str
+
